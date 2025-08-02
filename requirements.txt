@@ -1,0 +1,9 @@
+pandas
+numpy
+requests
+matplotlib
+scikit-learn
+seaborn
+torch
+openpyxl
+streamlit
