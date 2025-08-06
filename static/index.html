@@ -1,0 +1,1163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lefke Weather Prediction - AI Forecast</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #87CEEB 0%, #4682B4 50%, #1e6091 100%);
+            min-height: 100vh;
+            padding: 20px;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Animated particles background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(ellipse 200px 100px at 50% 10%, rgba(255,255,255,0.3) 0%, transparent 70%),
+                radial-gradient(ellipse 300px 150px at 80% 20%, rgba(255,255,255,0.2) 0%, transparent 70%),
+                radial-gradient(ellipse 250px 120px at 20% 30%, rgba(255,255,255,0.25) 0%, transparent 70%),
+                radial-gradient(ellipse 400px 200px at 70% 60%, rgba(255,255,255,0.15) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        /* Floating particles */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 120%;
+            height: 100%;
+            background-image: 
+                radial-gradient(4px 4px at 20px 30px, rgba(255,255,255,0.9), transparent),
+                radial-gradient(3px 3px at 40px 70px, rgba(255,255,255,0.8), transparent),
+                radial-gradient(5px 5px at 90px 40px, rgba(255,255,255,1), transparent),
+                radial-gradient(3px 3px at 130px 80px, rgba(255,255,255,0.9), transparent),
+                radial-gradient(4px 4px at 160px 30px, rgba(255,255,255,0.95), transparent),
+                radial-gradient(3px 3px at 200px 60px, rgba(255,255,255,0.8), transparent),
+                radial-gradient(5px 5px at 240px 90px, rgba(255,255,255,1), transparent),
+                radial-gradient(4px 4px at 280px 20px, rgba(255,255,255,0.9), transparent),
+                radial-gradient(3px 3px at 320px 70px, rgba(255,255,255,1), transparent),
+                radial-gradient(4px 4px at 360px 40px, rgba(255,255,255,0.85), transparent);
+            background-repeat: repeat;
+            background-size: 400px 200px;
+            animation: float-right 12s linear infinite;
+            pointer-events: none;
+            z-index: -1;
+            opacity: 0.9;
+        }
+
+        @keyframes float-right {
+            0% { transform: translateX(-400px); }
+            100% { transform: translateX(0px); }
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        /* Main Weather Card */
+        .weather-card {
+            background: rgba(15, 85, 135, 0.75);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            padding: 0;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.15);
+        }
+
+        /* Instruction Text */
+        .instruction-text {
+            text-align: center;
+            padding: 30px 30px 10px;
+            color: white;
+        }
+
+        .instruction-text h2 {
+            font-size: 1.5rem;
+            font-weight: 500;
+            margin: 0;
+            opacity: 0.9;
+        }
+
+        /* Model Selection Pills */
+        .model-pills {
+            padding: 20px 30px;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .model-pill {
+            background: rgba(255,255,255,0.2);
+            border: 2px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 0.95rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: all 0.3s ease;
+        }
+
+        .model-pill:hover {
+            background: rgba(255,255,255,0.3);
+            border-color: rgba(255,255,255,0.5);
+            transform: translateY(-2px);
+        }
+
+        .model-pill.active {
+            background: rgba(255,255,255,0.9);
+            color: #1e6091;
+            border-color: white;
+        }
+
+        /* Location and Date Section */
+        .location-section {
+            text-align: center;
+            padding: 40px 30px 30px;
+            color: white;
+        }
+
+        .location-title {
+            font-size: 3.5rem;
+            font-weight: 300;
+            margin-bottom: 8px;
+            letter-spacing: 1px;
+        }
+
+        .location-subtitle {
+            font-size: 1.3rem;
+            opacity: 0.9;
+            margin-bottom: 15px;
+            font-weight: 400;
+        }
+
+        .date-display {
+            font-size: 1.1rem;
+            opacity: 0.8;
+            margin-bottom: 30px;
+        }
+
+        /* Date Picker Controls */
+        .date-controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .date-input {
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: 1rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .date-input:focus {
+            outline: none;
+            background: rgba(255,255,255,0.3);
+            border-color: rgba(255,255,255,0.6);
+        }
+
+        .date-input::placeholder {
+            color: rgba(255,255,255,0.7);
+        }
+
+
+
+        /* Weather Icon */
+        .weather-icon {
+            font-size: 4rem;
+            margin: 20px 0;
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));
+        }
+
+        /* Weather Stats Grid */
+        .weather-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 16px;
+            overflow: hidden;
+            margin: 0 30px 30px;
+        }
+
+        .stat-item {
+            background: rgba(15, 85, 135, 0.7);
+            padding: 20px;
+            text-align: center;
+            color: white;
+            transition: all 0.3s ease;
+        }
+
+        .stat-item:hover {
+            background: rgba(15, 85, 135, 0.85);
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: 600;
+            line-height: 1;
+        }
+
+        /* Loading and Error States */
+        .loading {
+            display: none;
+            text-align: center;
+            color: white;
+            font-size: 1.1rem;
+            margin: 20px 0;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top: 3px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            display: none;
+            background: rgba(220, 53, 69, 0.9);
+            color: white;
+            padding: 15px;
+            border-radius: 12px;
+            margin: 20px 30px;
+            text-align: center;
+        }
+
+        /* Chart Section */
+        .chart-card {
+            background: rgba(15, 85, 135, 0.75);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            border: 1px solid rgba(255,255,255,0.15);
+        }
+
+        .chart-title {
+            color: white;
+            font-size: 1.5rem;
+            font-weight: 500;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .chart-controls {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+        }
+
+        .chart-btn {
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .chart-btn.active {
+            background: rgba(255,255,255,0.9);
+            color: #1e6091;
+            border-color: white;
+        }
+
+        .chart-btn:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-1px);
+        }
+
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin-bottom: 20px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 16px;
+            padding: 20px;
+        }
+
+        /* Temperature Display Section */
+        .temperature-display {
+            padding: 30px;
+        }
+
+        .temp-comparison {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 30px;
+            flex-wrap: wrap;
+        }
+
+        .temp-card {
+            background: rgba(255,255,255,0.1);
+            border-radius: 16px;
+            padding: 30px;
+            text-align: center;
+            color: white;
+            border: 1px solid rgba(255,255,255,0.2);
+            min-width: 200px;
+            flex: 1;
+            max-width: 300px;
+        }
+
+        .temp-label {
+            font-size: 1rem;
+            opacity: 0.8;
+            margin-bottom: 15px;
+            font-weight: 500;
+        }
+
+        .temp-value {
+            font-size: 3rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .temp-date {
+            font-size: 0.9rem;
+            opacity: 0.7;
+            font-weight: 400;
+        }
+
+        .temp-accuracy {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #87CEEB;
+        }
+
+        .temp-separator {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: white;
+            opacity: 0.7;
+        }
+        .prediction-summary {
+            display: none;
+            background: rgba(255,255,255,0.1);
+            border-radius: 16px;
+            padding: 25px;
+            margin-top: 20px;
+        }
+
+        .summary-title {
+            color: white;
+            font-size: 1.3rem;
+            font-weight: 500;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .summary-card {
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            color: white;
+        }
+
+        .summary-model {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .summary-value {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        /* No Data State */
+        .no-data {
+            text-align: center;
+            color: white;
+            margin-top: 80px;
+            opacity: 0.8;
+        }
+
+        .no-data-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .container {
+                padding: 0 10px;
+            }
+
+            .location-title {
+                font-size: 2.5rem;
+            }
+
+            .weather-stats {
+                grid-template-columns: repeat(2, 1fr);
+                margin: 0 20px 20px;
+            }
+
+            .nav-bar {
+                padding: 15px 20px;
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .model-pills {
+                padding: 15px 20px;
+                justify-content: center;
+            }
+
+            .date-controls {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .chart-container {
+                height: 300px;
+                padding: 15px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .location-title {
+                font-size: 2rem;
+            }
+
+            .weather-stats {
+                grid-template-columns: 1fr;
+            }
+
+            .model-pills {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .model-pill {
+                width: 200px;
+                text-align: center;
+            }
+
+            .comparison-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Input styling for WebKit browsers */
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+            cursor: pointer;
+        }
+
+        input[type="time"]::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+            cursor: pointer;
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(255,255,255,0.1);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.3);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255,255,255,0.5);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Main Weather Card -->
+        <div class="weather-card">
+            <!-- Instruction Text -->
+            <div class="instruction-text">
+                <h2>Select a Model to See Forecast</h2>
+            </div>
+
+            <!-- Model Selection Pills -->
+            <div class="model-pills">
+                <div class="model-pill" onclick="selectModel('lstm')" id="lstmPill">LSTM</div>
+                <div class="model-pill" onclick="selectModel('linear')" id="linearPill">Linear Regression</div>
+                <div class="model-pill" onclick="selectModel('random')" id="randomPill">Random Forest</div>
+            </div>
+
+            <!-- Location and Date Section -->
+            <div class="location-section">
+                <h1 class="location-title">Lefke</h1>
+                <p class="location-subtitle">Cyprus</p>
+                <p class="date-display" id="currentDate" style="display: none;"></p>
+
+                <!-- Date Controls -->
+                <div class="date-controls">
+                    <input type="date" id="selectedDate" class="date-input" min="2020-01-01" max="2025-06-29" value="2025-06-15">
+                    <input type="time" id="selectedTime" class="date-input" value="12:00">
+                </div>
+
+
+
+                <!-- Weather Icon -->
+                <div class="weather-icon">☀️</div>
+
+                <!-- Loading State -->
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    Loading weather data and making predictions...
+                </div>
+            </div>
+
+            <!-- Weather Stats Grid -->
+            <div class="weather-stats" id="weatherStats">
+                <div class="stat-item">
+                    <div class="stat-label">Humidity</div>
+                    <div class="stat-value" id="humidityValue">--</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Rain</div>
+                    <div class="stat-value" id="rainValue">--</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Temp</div>
+                    <div class="stat-value" id="tempValue">--°C</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Precipitation</div>
+                    <div class="stat-value" id="precipValue">--</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Snow</div>
+                    <div class="stat-value" id="snowValue">--</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Wind</div>
+                    <div class="stat-value" id="windValue">--</div>
+                </div>
+            </div>
+
+            <!-- Error Message -->
+            <div class="error-message" id="errorMessage"></div>
+        </div>
+
+        <!-- Chart Section -->
+        <div class="chart-card">
+            <h2 class="chart-title" id="chartTitle" style="display: none;">Model Results</h2>
+            
+            <!-- Chart Controls -->
+            <div class="chart-controls" id="chartControls" style="display: none;">
+                <div class="chart-btn active" onclick="setChartView('24h')" id="btn24h">24 Hours</div>
+                <div class="chart-btn" onclick="setChartView('7d')" id="btn7d">7 Days</div>
+                <div class="chart-btn" onclick="setChartView('30d')" id="btn30d">30 Days</div>
+            </div>
+            
+            <!-- Temperature Display Section -->
+            <div class="temperature-display" id="temperatureDisplay" style="display: none;">
+                <div class="temp-comparison">
+                    <div class="temp-card">
+                        <div class="temp-label">Actual Temperature</div>
+                        <div class="temp-value" id="actualTempDisplay">--°C</div>
+                        <div class="temp-date" id="actualTempDate">Select a date</div>
+                    </div>
+                    <div class="temp-separator">vs</div>
+                    <div class="temp-card">
+                        <div class="temp-label">Predicted Temperature</div>
+                        <div class="temp-value" id="predictedTempDisplay">--°C</div>
+                        <div class="temp-accuracy" id="accuracyDisplay">Accuracy: --%</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chart-container" id="chartContainer" style="display: none;">
+                <canvas id="temperatureChart"></canvas>
+            </div>
+
+            <!-- Prediction Summary -->
+            <div class="prediction-summary" id="predictionSummary">
+                <div class="summary-title">Model Comparison</div>
+                <div class="summary-grid" id="summaryGrid">
+                    <!-- Summary cards will be populated by JavaScript -->
+                </div>
+            </div>
+
+            <div class="no-data" id="noData">
+                <div class="no-data-icon">📈</div>
+                <h3>Select a model to see temperature comparison</h3>
+                <p>Choose LSTM, Linear Regression, or Random Forest</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://127.0.0.1:8000';
+        let temperatureChart = null;
+        let currentChartView = '24h';
+        let currentWeatherData = null;
+        let allPredictions = {};
+        let selectedModel = null;
+
+        // Initialize chart
+        function initChart() {
+            const ctx = document.getElementById('temperatureChart').getContext('2d');
+            temperatureChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: []
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    },
+                    plugins: {
+                        title: {
+                            display: false
+                        },
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                usePointStyle: true,
+                                padding: 20,
+                                color: 'white'
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            title: {
+                                display: true,
+                                text: 'Temperature (°C)',
+                                color: 'white'
+                            },
+                            grid: {
+                                color: 'rgba(255,255,255,0.2)'
+                            },
+                            ticks: {
+                                color: 'white'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Time',
+                                color: 'white'
+                            },
+                            grid: {
+                                color: 'rgba(255,255,255,0.2)'
+                            },
+                            ticks: {
+                                color: 'white'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Update chart title based on selected model
+        function updateChartTitle(modelType) {
+            const chartTitle = document.getElementById('chartTitle');
+            const temperatureDisplay = document.getElementById('temperatureDisplay');
+            
+            if (modelType === 'lstm') {
+                chartTitle.textContent = 'LSTM - Temperature Prediction';
+            } else if (modelType === 'linear') {
+                chartTitle.textContent = 'Linear Regression - Temperature Prediction';
+            } else if (modelType === 'random') {
+                chartTitle.textContent = 'Random Forest - Temperature Prediction';
+            }
+            
+            chartTitle.style.display = 'block';
+            temperatureDisplay.style.display = 'block';
+        }
+
+        // Update temperature display and show prediction info
+        function showPredictionInfo(dateTime, actualTemp, predictedTemp, modelType) {
+            const currentDate = document.getElementById('currentDate');
+            const noData = document.getElementById('noData');
+            
+            // Hide no data message
+            noData.style.display = 'none';
+            
+            // Show and update date display
+            const dateObj = new Date(dateTime);
+            const options = { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            };
+            currentDate.textContent = `Prediction for: ${dateObj.toLocaleDateString('en-US', options)}`;
+            currentDate.style.display = 'block';
+            
+            // Update temperature display
+            const actualTempDisplay = document.getElementById('actualTempDisplay');
+            const predictedTempDisplay = document.getElementById('predictedTempDisplay');
+            const accuracyDisplay = document.getElementById('accuracyDisplay');
+            const actualTempDate = document.getElementById('actualTempDate');
+            
+            // Format the date for display
+            const dateOnly = dateObj.toLocaleDateString('en-US', { 
+                month: 'short', 
+                day: 'numeric', 
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            
+            actualTempDate.textContent = dateOnly;
+            
+            if (modelType === 'lstm') {
+                // For LSTM, show average prediction
+                const avgPredicted = Array.isArray(predictedTemp) 
+                    ? predictedTemp.reduce((a, b) => a + b, 0) / predictedTemp.length 
+                    : predictedTemp;
+                actualTempDisplay.textContent = actualTemp.toFixed(1) + '°C';
+                predictedTempDisplay.textContent = avgPredicted.toFixed(1) + '°C';
+                
+                const accuracy = Math.max(0, 100 - Math.abs(actualTemp - avgPredicted) / actualTemp * 100);
+                accuracyDisplay.textContent = `Accuracy: ${accuracy.toFixed(1)}%`;
+            } else {
+                // For single predictions
+                actualTempDisplay.textContent = actualTemp.toFixed(1) + '°C';
+                predictedTempDisplay.textContent = predictedTemp.toFixed(1) + '°C';
+                
+                const accuracy = Math.max(0, 100 - Math.abs(actualTemp - predictedTemp) / actualTemp * 100);
+                accuracyDisplay.textContent = `Accuracy: ${accuracy.toFixed(1)}%`;
+            }
+        }
+
+        // Select model
+        function selectModel(modelType) {
+            selectedModel = modelType;
+            
+            // Update pill styles
+            document.querySelectorAll('.model-pill').forEach(pill => {
+                pill.classList.remove('active');
+            });
+            document.getElementById(modelType + 'Pill').classList.add('active');
+            
+            // Update chart title and controls
+            updateChartTitle(modelType);
+            
+            // Make prediction
+            loadWeatherAndPredict(modelType);
+        }
+
+        // Show/hide loading state
+        function setLoading(isLoading) {
+            const loading = document.getElementById('loading');
+            const errorMessage = document.getElementById('errorMessage');
+            
+            loading.style.display = isLoading ? 'block' : 'none';
+            errorMessage.style.display = 'none';
+        }
+
+        // Show error message
+        function showError(message) {
+            const errorMessage = document.getElementById('errorMessage');
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+            setLoading(false);
+        }
+
+        // Load weather data for selected date and make prediction
+        async function loadWeatherAndPredict(modelType) {
+            setLoading(true);
+            document.getElementById('noData').style.display = 'none';
+
+            const selectedDate = document.getElementById('selectedDate').value;
+            const selectedTime = document.getElementById('selectedTime').value;
+            const fullDateTime = `${selectedDate}T${selectedTime}:00`;
+
+            try {
+                // Get weather data for the selected date
+                const weatherData = await getMockWeatherData(fullDateTime);
+                currentWeatherData = weatherData;
+                
+                // Display current weather conditions
+                displayCurrentWeather(weatherData);
+
+                // Make prediction
+                let requestData;
+                let endpoint = `${API_BASE_URL}/predict/${modelType}`;
+
+                if (modelType === 'lstm') {
+                    // For LSTM, generate 168 hours of historical data
+                    const historicalData = generateHistoricalData(new Date(fullDateTime).getTime() - 167 * 60 * 60 * 1000, 168);
+                    requestData = historicalData.map(d => ({
+                        temperature: d.temperature,
+                        precip: Math.random() * 2,
+                        snow: 0,
+                        humidity: 60 + Math.random() * 20,
+                        rain: Math.random() * 1,
+                        wind: 5 + Math.random() * 15,
+                        soil_temperature: d.temperature - 2 + Math.random() * 4,
+                        soil_moist: 0.2 + Math.random() * 0.3
+                    }));
+                } else {
+                    requestData = weatherData;
+                }
+
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestData)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const result = await response.json();
+                
+                // Store prediction
+                allPredictions[modelType] = result;
+                
+                // Show prediction info with comparison
+                const predictedValue = modelType === 'lstm' ? result.prediction : result.prediction;
+                showPredictionInfo(fullDateTime, weatherData.temperature, predictedValue, modelType);
+                
+                // Update chart - make sure chart is visible
+                document.getElementById('noData').style.display = 'none';
+                updateChart(modelType, result, new Date(fullDateTime));
+                updatePredictionSummary();
+                
+                setLoading(false);
+
+            } catch (error) {
+                console.error('Error:', error);
+                showError(`Failed to get prediction. Make sure your API server is running.`);
+            }
+        }
+
+        // Get actual historical weather data from your API
+        async function getMockWeatherData(dateTime) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/weather/historical/${dateTime}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                
+                return {
+                    temperature: data.temperature,
+                    precip: data.precip,
+                    snow: data.snow,
+                    humidity: data.humidity,
+                    rain: data.rain,
+                    wind: data.wind,
+                    soil_temperature: data.soil_temperature,
+                    soil_moist: data.soil_moist
+                };
+            } catch (error) {
+                console.error('Error fetching historical weather:', error);
+                
+                // Fallback to mock data if API fails
+                const date = new Date(dateTime);
+                const hour = date.getHours();
+                const baseTemp = 15 + Math.sin((hour / 24) * 2 * Math.PI) * 10 + 
+                            Math.sin((date.getMonth() / 12) * 2 * Math.PI) * 8;
+                
+                return {
+                    temperature: baseTemp + Math.random() * 5,
+                    precip: Math.random() * 3,
+                    snow: (date.getMonth() > 10 || date.getMonth() < 3) ? Math.random() * 2 : 0,
+                    humidity: 50 + Math.random() * 40,
+                    rain: Math.random() * 2,
+                    wind: 5 + Math.random() * 20,
+                    soil_temperature: baseTemp - 2 + Math.random() * 4,
+                    soil_moist: 0.15 + Math.random() * 0.4
+                };
+            }
+        }
+
+        // Display current weather conditions
+        function displayCurrentWeather(weather) {
+            document.getElementById('humidityValue').textContent = Math.round(weather.humidity);
+            document.getElementById('rainValue').textContent = weather.rain.toFixed(1);
+            document.getElementById('tempValue').textContent = weather.temperature.toFixed(1) + '°C';
+            document.getElementById('precipValue').textContent = weather.precip.toFixed(1);
+            document.getElementById('snowValue').textContent = weather.snow.toFixed(1);
+            document.getElementById('windValue').textContent = weather.wind.toFixed(1);
+        }
+
+        // Generate mock historical data (replace with actual API call)
+        function generateHistoricalData(startDate, hours) {
+            const data = [];
+            const start = new Date(startDate);
+            
+            for (let i = 0; i < hours; i++) {
+                const date = new Date(start.getTime() + i * 60 * 60 * 1000);
+                const baseTemp = 20 + Math.sin((i / 24) * 2 * Math.PI) * 8 + Math.random() * 3;
+                data.push({
+                    time: date.toISOString(),
+                    temperature: baseTemp,
+                    actual: true
+                });
+            }
+            return data;
+        }
+
+        // Update chart with prediction data
+        function updateChart(modelType, result, startDate) {
+            const datasets = temperatureChart.data.datasets;
+            
+            // Clear existing datasets
+            temperatureChart.data.datasets = [];
+            temperatureChart.data.labels = [];
+            
+            if (modelType === 'lstm') {
+                // For LSTM, show 24-hour forecast
+                const labels = [];
+                for (let i = 0; i < 24; i++) {
+                    const date = new Date(startDate.getTime() + i * 60 * 60 * 1000);
+                    labels.push(date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }));
+                }
+                
+                // Generate actual data for comparison
+                const actualTemps = [];
+                for (let i = 0; i < 24; i++) {
+                    const temp = 20 + Math.sin((i / 24) * 2 * Math.PI) * 8 + Math.random() * 3;
+                    actualTemps.push(temp);
+                }
+                
+                temperatureChart.data.labels = labels;
+                temperatureChart.data.datasets = [
+                    {
+                        label: 'Actual Temperature',
+                        data: actualTemps,
+                        borderColor: '#87CEEB',
+                        backgroundColor: 'rgba(135, 206, 235, 0.1)',
+                        borderWidth: 3,
+                        fill: false,
+                        pointRadius: 3
+                    },
+                    {
+                        label: 'LSTM Prediction',
+                        data: result.prediction,
+                        borderColor: '#ffce56',
+                        backgroundColor: 'rgba(255, 206, 86, 0.1)',
+                        borderWidth: 2,
+                        borderDash: [5, 5],
+                        fill: false,
+                        pointRadius: 3
+                    }
+                ];
+            } else {
+                // For single predictions, show just a comparison
+                temperatureChart.data.labels = ['Current', 'Next Hour'];
+                temperatureChart.data.datasets = [
+                    {
+                        label: 'Temperature',
+                        data: [currentWeatherData.temperature, result.prediction],
+                        borderColor: modelType === 'linear' ? '#ff6384' : '#4bc0c0',
+                        backgroundColor: modelType === 'linear' ? 'rgba(255, 99, 132, 0.1)' : 'rgba(75, 192, 192, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        pointRadius: 6,
+                        pointBackgroundColor: ['#87CEEB', modelType === 'linear' ? '#ff6384' : '#4bc0c0']
+                    }
+                ];
+            }
+
+            temperatureChart.update();
+        }
+
+        // Generate actual temperature data
+        function generateActualTemperatureData(startDate, timeRange) {
+            const hours = timeRange === '24h' ? 24 : timeRange === '7d' ? 168 : 720;
+            const labels = [];
+            const temperatures = [];
+            
+            for (let i = 0; i < hours; i++) {
+                const date = new Date(startDate.getTime() + i * 60 * 60 * 1000);
+                const temp = 20 + Math.sin((i / 24) * 2 * Math.PI) * 8 + Math.random() * 3;
+                
+                if (timeRange === '24h') {
+                    labels.push(date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }));
+                } else {
+                    labels.push(date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit' }));
+                }
+                temperatures.push(temp);
+            }
+            
+            return { labels, temperatures };
+        }
+
+        // Format prediction data for chart
+        function formatPredictionData(result, modelType, startDate) {
+            if (modelType === 'lstm') {
+                return result.prediction;
+            } else {
+                // For single predictions, show as a point at the next hour
+                const predictedHours = currentChartView === '24h' ? 24 : 
+                                     currentChartView === '7d' ? 168 : 720;
+                const predictionData = new Array(predictedHours).fill(null);
+                predictionData[1] = result.prediction; // Show prediction at next hour
+                return predictionData;
+            }
+        }
+
+        // Get model display name
+        function getModelDisplayName(modelType) {
+            const names = {
+                'linear': 'Linear Regression',
+                'random': 'Random Forest',
+                'lstm': 'LSTM Neural'
+            };
+            return names[modelType];
+        }
+
+        // Get model color
+        function getModelColor(modelType, alpha = 1) {
+            const colors = {
+                'linear': alpha < 1 ? `rgba(255, 99, 132, ${alpha})` : '#ff6384',
+                'random': alpha < 1 ? `rgba(75, 192, 192, ${alpha})` : '#4bc0c0',
+                'lstm': alpha < 1 ? `rgba(255, 206, 86, ${alpha})` : '#ffce56'
+            };
+            return colors[modelType];
+        }
+
+        // Update prediction summary (removed - no longer used)
+        function updatePredictionSummary() {
+            // This function is no longer used since we removed the prediction summary section
+        }
+
+        // Set chart view timeframe (only for LSTM)
+        function setChartView(timeRange) {
+            if (selectedModel !== 'lstm') return; // Only LSTM supports different time ranges
+            
+            currentChartView = timeRange;
+            
+            // Update button states
+            document.querySelectorAll('.chart-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`btn${timeRange}`).classList.add('active');
+            
+            // Clear chart and predictions
+            if (temperatureChart) {
+                temperatureChart.data.datasets = [];
+                temperatureChart.data.labels = [];
+                temperatureChart.update();
+            }
+            
+            allPredictions = {};
+            updatePredictionSummary();
+            
+            // Show no data message
+            document.getElementById('noData').style.display = 'block';
+        }
+
+        // Set quick date
+        function setQuickDate(option) {
+            const dateInput = document.getElementById('selectedDate');
+            const today = new Date();
+            
+            switch(option) {
+                case 'today':
+                    dateInput.value = today.toISOString().split('T')[0];
+                    break;
+                case 'tomorrow':
+                    const tomorrow = new Date(today);
+                    tomorrow.setDate(tomorrow.getDate() + 1);
+                    dateInput.value = tomorrow.toISOString().split('T')[0];
+                    break;
+                case 'week':
+                    const nextWeek = new Date(today);
+                    nextWeek.setDate(nextWeek.getDate() + 7);
+                    dateInput.value = nextWeek.toISOString().split('T')[0];
+                    break;
+            }
+            
+            // Trigger prediction if model is selected
+            if (selectedModel) {
+                loadWeatherAndPredict(selectedModel);
+            }
+        }
+
+        // Initialize on page load
+        window.addEventListener('load', function() {
+            // Set default date to a recent date
+            document.getElementById('selectedDate').value = '2025-06-15';
+            document.getElementById('selectedTime').value = '12:00';
+            
+            // Initialize chart
+            initChart();
+        });
+    </script>
+</body>
+</html>
